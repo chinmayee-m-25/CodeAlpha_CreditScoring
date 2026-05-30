@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Credit Scoring Model</title>
+  <style>
+    body { font-family: Arial; max-width: 600px; margin: 40px auto; padding: 20px; background: #f4f4f4; }
+    h1 { color: #333; text-align: center; }
+    .form-group { margin: 12px 0; }
+    label { display: block; font-weight: bold; margin-bottom: 4px; }
+    input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+    button { width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; margin-top: 16px; }
+    button:hover { background: #0056b3; }
+    #result { margin-top: 24px; padding: 20px; border-radius: 8px; text-align: center; font-size: 20px; font-weight: bold; display: none; }
+    .no-default { background: #d4edda; color: #155724; }
+    .default    { background: #f8d7da; color: #721c24; }
+  </style>
+</head>
+<body>
+  <h1>Credit Scoring Predictor</h1>
+
+  <div class="form-group">
+    <label>Investment Total</label>
+    <input type="number" id="INVESTMENT_TOTAL" value="10000"/>
+  </div>
+  <div class="form-group">
+    <label>Current Balance</label>
+    <input type="number" id="ACCCURRENTBALANCE" value="5000"/>
+  </div>
+  <div class="form-group">
+    <label>Marital Status (0=Single, 1=Married)</label>
+    <input type="number" id="INF_MARITAL_STATUS" value="0"/>
+  </div>
+  <div class="form-group">
+    <label>Gender (0=Female, 1=Male)</label>
+    <input type="number" id="INF_GENDER" value="0"/>
+  </div>
+  <div class="form-group">
+    <label>Instalment Size</label>
+    <input type="number" id="INSTALL_SIZE" value="500"/>
+  </div>
+  <div class="form-group">
+    <label>Due Payment</label>
+    <input type="number" id="DUE_PAYMENT" value="200"/>
+  </div>
+  <div class="form-group">
+    <label>Compensation Charged (0=No, 1=Yes)</label>
+    <input type="number" id="COMPENSATION_CHARGED" value="0"/>
+  </div>
+  <div class="form-group">
+    <label>Client Type</label>
+    <input type="number" id="CLIENT_TYPE" value="1"/>
+  </div>
+  <div class="form-group">
+    <label>Quality of Loan (0=Bad, 1=Good)</label>
+    <input type="number" id="QUALITY_OF_LOAN" value="1"/>
+  </div>
+
+  <button onclick="predict()">Check Credit Risk</button>
+
+  <div id="result"></div>
+
+  <script>
+    async function predict() {
+      const data = {
+        INVESTMENT_TOTAL    : +document.getElementById('INVESTMENT_TOTAL').value,
+        ACCCURRENTBALANCE   : +document.getElementById('ACCCURRENTBALANCE').value,
+        INF_MARITAL_STATUS  : +document.getElementById('INF_MARITAL_STATUS').value,
+        INF_GENDER          : +document.getElementById('INF_GENDER').value,
+        INSTALL_SIZE        : +document.getElementById('INSTALL_SIZE').value,
+        DUE_PAYMENT         : +document.getElementById('DUE_PAYMENT').value,
+        COMPENSATION_CHARGED: +document.getElementById('COMPENSATION_CHARGED').value,
+        CLIENT_TYPE         : +document.getElementById('CLIENT_TYPE').value,
+        QUALITY_OF_LOAN     : +document.getElementById('QUALITY_OF_LOAN').value
+      };
+
+      const response = await fetch('/predict', {
+        method : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body   : JSON.stringify(data)
+      });
+
+      const result = await response.json();
+      const div    = document.getElementById('result');
+      div.style.display = 'block';
+
+      if (result.prediction === 'NO DEFAULT') {
+        div.className   = 'no-default';
+        div.innerHTML   = 'LOW RISK - NO DEFAULT<br><small>Default Probability: ' + result.probability + '%</small>';
+      } else {
+        div.className   = 'default';
+        div.innerHTML   = 'HIGH RISK - DEFAULT LIKELY<br><small>Default Probability: ' + result.probability + '%</small>';
+      }
+    }
+  </script>
+</body>
+</html>
