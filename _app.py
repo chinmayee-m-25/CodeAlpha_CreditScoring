@@ -1,9 +1,7 @@
 import streamlit as st
-import joblib
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
@@ -11,36 +9,32 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import (accuracy_score, precision_score,
                              recall_score, f1_score,
-                             roc_auc_score, roc_curve,
-                             confusion_matrix)
+                             roc_auc_score, roc_curve)
 from imblearn.over_sampling import SMOTE
 
 st.set_page_config(page_title="Credit Scoring Model", layout="wide")
 st.title("Credit Scoring Model")
 st.markdown("---")
 
-# ── Load and prepare data ─────────────────────────────────────
 @st.cache_data
 def load_and_train():
     train_df = pd.read_excel('credit_risk_dataset.csv/train-FIN_ANA_DATA .xls')
-    test_df  = pd.read_excel('credit_risk_dataset.csv/test-FIN_ANA_DATA .xls')
 
-    for df in [train_df, test_df]:
-        df.drop(columns=['ACC_NO'], inplace=True)
-        df['INSTALL_SIZE']  = df['INSTALL_SIZE'].fillna(df['INSTALL_SIZE'].median())
-        df['CLIENT_TYPE']   = df['CLIENT_TYPE'].fillna(df['CLIENT_TYPE'].mode()[0])
-        for col in ['INF_MARITAL_STATUS', 'INF_GENDER', 'COMPENSATION_CHARGED']:
-            df[col] = df[col].fillna(df[col].mode()[0])
-        df['BALANCE_TO_INVEST'] = df['ACCCURRENTBALANCE'] / (df['INVESTMENT_TOTAL'] + 1)
-        df['PAYMENT_BURDEN']    = df['INSTALL_SIZE'] / (df['DUE_PAYMENT'] + 1)
-        df['IS_HIGH_BALANCE']   = (df['ACCCURRENTBALANCE'] > 68348).astype(int)
+    train_df = train_df.drop(columns=['ACC_NO'])
+    train_df['INSTALL_SIZE']  = train_df['INSTALL_SIZE'].fillna(train_df['INSTALL_SIZE'].median())
+    train_df['CLIENT_TYPE']   = train_df['CLIENT_TYPE'].fillna(train_df['CLIENT_TYPE'].mode()[0])
+    for col in ['INF_MARITAL_STATUS', 'INF_GENDER', 'COMPENSATION_CHARGED']:
+        train_df[col] = train_df[col].fillna(train_df[col].mode()[0])
+
+    train_df['BALANCE_TO_INVEST'] = train_df['ACCCURRENTBALANCE'] / (train_df['INVESTMENT_TOTAL'] + 1)
+    train_df['PAYMENT_BURDEN']    = train_df['INSTALL_SIZE'] / (train_df['DUE_PAYMENT'] + 1)
+    train_df['IS_HIGH_BALANCE']   = (train_df['ACCCURRENTBALANCE'] > 68348).astype(int)
 
     cat_cols = ['INF_MARITAL_STATUS', 'INF_GENDER',
                 'COMPENSATION_CHARGED', 'CLIENT_TYPE', 'QUALITY_OF_LOAN']
     le = LabelEncoder()
     for col in cat_cols:
         train_df[col] = le.fit_transform(train_df[col].astype(str))
-        test_df[col]  = le.fit_transform(test_df[col].astype(str))
 
     train_df['REPAY_MODE'] = train_df['REPAY_MODE'].map({'N': 0, 'I': 1})
 
@@ -67,7 +61,6 @@ with st.spinner("Loading model and data..."):
     models, X_train, X_val, y_train, y_val = load_and_train()
     best_model = models['Random Forest']
 
-# ── Tabs ──────────────────────────────────────────────────────
 tab1, tab2, tab3, tab4 = st.tabs([
     "Prediction",
     "Feature Importance",
@@ -75,7 +68,6 @@ tab1, tab2, tab3, tab4 = st.tabs([
     "ROC Curve"
 ])
 
-# ── Tab 1: Prediction ─────────────────────────────────────────
 with tab1:
     st.subheader("Enter Customer Details")
     col1, col2 = st.columns(2)
@@ -120,7 +112,6 @@ with tab1:
             st.error("HIGH RISK — DEFAULT LIKELY")
         st.metric("Default Probability", f"{round(probability, 2)}%")
 
-# ── Tab 2: Feature Importance ─────────────────────────────────
 with tab2:
     st.subheader("Feature Importance — Random Forest")
     st.write("Shows which features most influence the credit default prediction.")
@@ -141,7 +132,6 @@ with tab2:
     st.pyplot(fig)
     st.caption("Red bars = top 3 most important features")
 
-# ── Tab 3: Model Comparison ───────────────────────────────────
 with tab3:
     st.subheader("Model Comparison")
     st.write("Comparison of all 3 models across key metrics.")
@@ -162,8 +152,8 @@ with tab3:
     st.dataframe(results_df, use_container_width=True)
 
     fig, ax = plt.subplots(figsize=(10, 5))
-    x     = np.arange(len(results_df.columns))
-    width = 0.25
+    x      = np.arange(len(results_df.columns))
+    width  = 0.25
     colors = ['#2196F3', '#4CAF50', '#F44336']
 
     for i, (name, row) in enumerate(results_df.iterrows()):
@@ -180,7 +170,6 @@ with tab3:
     ax.spines['right'].set_visible(False)
     st.pyplot(fig)
 
-# ── Tab 4: ROC Curve ──────────────────────────────────────────
 with tab4:
     st.subheader("ROC Curve")
     st.write("Higher the curve, better the model at distinguishing default vs no default.")
@@ -189,9 +178,9 @@ with tab4:
     colors  = ['#2196F3', '#4CAF50', '#F44336']
 
     for (name, model), color in zip(models.items(), colors):
-        y_prob           = model.predict_proba(X_val)[:, 1]
-        fpr, tpr, _      = roc_curve(y_val, y_prob)
-        auc              = round(roc_auc_score(y_val, y_prob), 4)
+        y_prob      = model.predict_proba(X_val)[:, 1]
+        fpr, tpr, _ = roc_curve(y_val, y_prob)
+        auc         = round(roc_auc_score(y_val, y_prob), 4)
         ax.plot(fpr, tpr, label=f'{name} (AUC={auc})', color=color, linewidth=2)
 
     ax.plot([0, 1], [0, 1], 'k--', linewidth=1, label='Random Classifier')
